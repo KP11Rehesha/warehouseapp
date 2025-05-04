@@ -22,6 +22,10 @@ app.use(bodyParser.urlencoded({ extended: false }));
 app.use(cors());
 
 /* ROUTES */
+app.get("/", (req, res) => {
+  res.json({ message: "Welcome to the Inventory Management API" });
+});
+
 app.use("/dashboard", dashboardRoutes); // http://localhost:8000/dashboard
 app.use("/products", productRoutes); // http://localhost:8000/products
 app.use("/users", userRoutes); // http://localhost:8000/users
