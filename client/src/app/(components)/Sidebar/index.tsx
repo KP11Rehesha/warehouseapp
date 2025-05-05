@@ -7,15 +7,18 @@ import {
   CircleDollarSign,
   Clipboard,
   Layout,
+  LogOut,
   LucideIcon,
   Menu,
-  SlidersHorizontal,
+  Settings,
   User,
+  Tags,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import React from "react";
+import { authService } from "@/services/authService";
 
 interface SidebarLinkProps {
   href: string;
@@ -61,12 +64,22 @@ const SidebarLink = ({
 
 const Sidebar = () => {
   const dispatch = useAppDispatch();
+  const router = useRouter();
   const isSidebarCollapsed = useAppSelector(
     (state) => state.global.isSidebarCollapsed
   );
 
   const toggleSidebar = () => {
     dispatch(setIsSidebarCollapsed(!isSidebarCollapsed));
+  };
+
+  const handleLogout = async () => {
+    try {
+      await authService.logout();
+      router.push('/auth/login');
+    } catch (error) {
+      console.error('Logout failed:', error);
+    }
   };
 
   const sidebarClassNames = `fixed flex flex-col ${
@@ -105,7 +118,7 @@ const Sidebar = () => {
       </div>
 
       {/* LINKS */}
-      <div className="flex-grow mt-8">
+      <div className="flex flex-col mt-8 grow">
         <SidebarLink
           href="/dashboard"
           icon={Layout}
@@ -125,6 +138,12 @@ const Sidebar = () => {
           isCollapsed={isSidebarCollapsed}
         />
         <SidebarLink
+          href="/categories"
+          icon={Tags}
+          label="Categories"
+          isCollapsed={isSidebarCollapsed}
+        />
+        <SidebarLink
           href="/users"
           icon={User}
           label="Users"
@@ -132,7 +151,7 @@ const Sidebar = () => {
         />
         <SidebarLink
           href="/settings"
-          icon={SlidersHorizontal}
+          icon={Settings}
           label="Settings"
           isCollapsed={isSidebarCollapsed}
         />
@@ -142,6 +161,25 @@ const Sidebar = () => {
           label="Expenses"
           isCollapsed={isSidebarCollapsed}
         />
+      </div>
+
+      {/* LOGOUT BUTTON */}
+      <div className="mt-auto mb-4">
+        <button
+          onClick={handleLogout}
+          className={`w-full flex items-center ${
+            isSidebarCollapsed ? "justify-center py-4" : "justify-start px-8 py-4"
+          } hover:text-red-500 hover:bg-red-100 gap-3 transition-colors`}
+        >
+          <LogOut className="w-6 h-6 !text-gray-700" />
+          <span
+            className={`${
+              isSidebarCollapsed ? "hidden" : "block"
+            } font-medium text-gray-700`}
+          >
+            Logout
+          </span>
+        </button>
       </div>
 
       {/* FOOTER */}

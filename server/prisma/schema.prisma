@@ -14,19 +14,39 @@ datasource db {
 }
 
 model Users {
-  userId String @id
-  name   String
-  email  String
+  userId    String   @id @default(uuid())
+  name      String
+  email     String   @unique
+  password  String   @default("")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+}
+
+model Category {
+  categoryId   String     @id @default(uuid())
+  name         String
+  description  String?
+  products     Products[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
 }
 
 model Products {
-  productId     String      @id
+  productId     String      @id @default(uuid())
+  sku           String?     @unique // Made optional temporarily
   name          String
+  description   String?
   price         Float
+  dimensions    String?     // Format: "LxWxH" in cm
+  weight        Float?      // in kg
   rating        Float?
   stockQuantity Int
+  categoryId    String?
+  category      Category?   @relation(fields: [categoryId], references: [categoryId])
   Sales         Sales[]
   Purchases     Purchases[]
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @default(now()) @updatedAt
 }
 
 model Sales {
