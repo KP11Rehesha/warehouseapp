@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { PrismaClient, Users } from '@prisma/client';
+import { PrismaClient, Role } from '@prisma/client';
 
 const prisma = new PrismaClient();
 const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
@@ -9,7 +9,10 @@ const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key';
 declare global {
   namespace Express {
     interface Request {
-      user?: Users;
+      user?: {
+        userId: string;
+        role: Role;
+      };
     }
   }
 }
@@ -24,11 +27,15 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
       return res.status(401).json({ message: 'Unauthorized' });
     }
 
-    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string };
+    const decoded = jwt.verify(token, JWT_SECRET) as { userId: string; role: string };
     console.log('Middleware - Decoded token:', decoded);
 
     const user = await prisma.users.findUnique({
       where: { userId: decoded.userId },
+      select: {
+        userId: true,
+        role: true,
+      },
     });
 
     if (!user) {
@@ -37,7 +44,10 @@ export const authMiddleware = async (req: Request, res: Response, next: NextFunc
     }
 
     // Add user to request object
-    req.user = user;
+    req.user = {
+      userId: user.userId,
+      role: user.role,
+    };
     console.log('Middleware - User authenticated:', user.userId);
     next();
   } catch (error) {

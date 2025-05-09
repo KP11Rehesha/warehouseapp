@@ -79,7 +79,12 @@ export interface User {
 }
 
 export const api = createApi({
-  baseQuery: fetchBaseQuery({ baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL, credentials: 'include' }),
+  baseQuery: fetchBaseQuery({ 
+    baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL 
+      ? `${process.env.NEXT_PUBLIC_API_BASE_URL}/api`
+      : 'http://localhost:3001/api', 
+    credentials: 'include' 
+  }),
   reducerPath: "api",
   tagTypes: ["DashboardMetrics", "Products", "Product", "Users", "Expenses", "Categories", "Category"],
   endpoints: (build) => ({

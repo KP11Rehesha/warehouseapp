@@ -11,7 +11,7 @@ import {
   Category
 } from "@/state/api";
 import { PlusCircleIcon, SearchIcon, EditIcon, TrashIcon } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Header from "@/app/(components)/Header";
 import Rating from "@/app/(components)/Rating";
 import CreateProductModal from "./CreateProductModal";

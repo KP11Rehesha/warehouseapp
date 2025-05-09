@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useGetProductsQuery } from "@/state/api";
 import Header from "@/app/(components)/Header";
 import { DataGrid, GridColDef } from "@mui/x-data-grid";
@@ -29,8 +30,41 @@ const columns: GridColDef[] = [
   },
 ];
 
-const Inventory = () => {
+const InventoryPage = () => {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const { data: products, isError, isLoading } = useGetProductsQuery();
+
+  useEffect(() => {
+    const fetchInventory = async () => {
+      try {
+        const response = await fetch('http://localhost:3001/api/products', {
+          credentials: 'include',
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to fetch inventory');
+        }
+
+        const data = await response.json();
+        console.log('Inventory data:', data);
+      } catch (err) {
+        setError(err instanceof Error ? err.message : 'An error occurred');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchInventory();
+  }, []);
+
+  if (loading) {
+    return <div>Loading inventory...</div>;
+  }
+
+  if (error) {
+    return <div>Error: {error}</div>;
+  }
 
   if (isLoading) {
     return <div className="py-4">Loading...</div>;
@@ -58,4 +92,4 @@ const Inventory = () => {
   );
 };
 
-export default Inventory;
+export default InventoryPage;

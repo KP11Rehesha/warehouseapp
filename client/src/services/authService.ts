@@ -5,12 +5,20 @@ interface LoginCredentials {
 
 interface RegisterCredentials extends LoginCredentials {
   confirmPassword: string;
+  role?: 'ADMIN' | 'WAREHOUSE_STAFF';
 }
 
-const API_URL = 'http://localhost:3001';
+export interface User {
+  userId: string;
+  name: string;
+  email: string;
+  role: 'ADMIN' | 'WAREHOUSE_STAFF';
+}
+
+const API_URL = 'http://localhost:3001/api';
 
 export const authService = {
-  async login(email: string, password: string) {
+  async login(email: string, password: string): Promise<User> {
     try {
       console.log('Attempting login with:', { email, password });
       const response = await fetch(`${API_URL}/auth/login`, {
@@ -32,16 +40,16 @@ export const authService = {
 
       const data = await response.json();
       console.log('Login response:', data);
-      return data;
+      return data.user;
     } catch (error) {
       console.error('Login error:', error);
       throw error;
     }
   },
 
-  async register(email: string, password: string, name?: string) {
+  async register(email: string, password: string, name?: string, role?: 'ADMIN' | 'WAREHOUSE_STAFF'): Promise<User> {
     try {
-      console.log('Attempting registration with:', { email, password, name });
+      console.log('Attempting registration with:', { email, password, name, role });
       const response = await fetch(`${API_URL}/auth/register`, {
         method: 'POST',
         headers: {
@@ -51,7 +59,8 @@ export const authService = {
         body: JSON.stringify({ 
           email: email.trim(),
           password: password.trim(),
-          name: (name || email.split('@')[0]).trim()
+          name: (name || email.split('@')[0]).trim(),
+          role: role || 'WAREHOUSE_STAFF'
         }),
       });
 
@@ -62,14 +71,14 @@ export const authService = {
 
       const data = await response.json();
       console.log('Registration response:', data);
-      return data;
+      return data.user;
     } catch (error) {
       console.error('Registration error:', error);
       throw error;
     }
   },
 
-  async logout() {
+  async logout(): Promise<void> {
     try {
       console.log('Attempting logout');
       const response = await fetch(`${API_URL}/auth/logout`, {
@@ -78,20 +87,15 @@ export const authService = {
       });
 
       if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || 'Logout failed');
+        throw new Error('Logout failed');
       }
-
-      const data = await response.json();
-      console.log('Logout response:', data);
-      return data;
     } catch (error) {
       console.error('Logout error:', error);
       throw error;
     }
   },
 
-  async checkAuth() {
+  async checkAuth(): Promise<User> {
     try {
       console.log('Checking authentication status');
       const response = await fetch(`${API_URL}/auth/check`, {
@@ -105,7 +109,7 @@ export const authService = {
 
       const data = await response.json();
       console.log('Auth check response:', data);
-      return data;
+      return data.user;
     } catch (error) {
       console.error('Auth check error:', error);
       throw error;

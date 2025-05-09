@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { useGetUsersQuery } from "@/state/api";
 import Header from "@/app/(components)/Header";
 import { DataGrid, GridColDef } from "@mui/x-data-grid";
@@ -10,7 +11,7 @@ const columns: GridColDef[] = [
   { field: "email", headerName: "Email", width: 200 },
 ];
 
-const Users = () => {
+const UsersPage = () => {
   const { data: users, isError, isLoading } = useGetUsersQuery();
 
   if (isLoading) {
@@ -37,4 +38,4 @@ const Users = () => {
   );
 };
 
-export default Users;
+export default UsersPage;

@@ -1,22 +1,20 @@
 import { Router } from "express";
-import {
-  getCategories,
-  getCategoryById,
-  createCategory,
-  updateCategory,
-  deleteCategory,
-} from "../controllers/categoryController";
-import { authMiddleware } from "../middleware/authMiddleware"; // Assuming you want to protect these routes
+import { categoryController } from "../controllers/categoryController";
+import { authMiddleware } from "../middleware/authMiddleware";
+import { roleMiddleware } from "../middleware/roleMiddleware";
+import { Role } from "@prisma/client";
 
 const router = Router();
 
-// Public routes (adjust as needed)
-router.get("/", getCategories);
-router.get("/:id", getCategoryById);
+// All category routes require authentication
+router.use(authMiddleware);
 
-// Protected routes (adjust as needed)
-router.post("/", authMiddleware, createCategory);
-router.put("/:id", authMiddleware, updateCategory);
-router.delete("/:id", authMiddleware, deleteCategory);
+// Get all categories - accessible by all authenticated users
+router.get("/", categoryController.getCategories);
+
+// Create, update, and delete operations require ADMIN role
+router.post("/", roleMiddleware([Role.ADMIN]), categoryController.createCategory);
+router.put("/:id", roleMiddleware([Role.ADMIN]), categoryController.updateCategory);
+router.delete("/:id", roleMiddleware([Role.ADMIN]), categoryController.deleteCategory);
 
 export default router; 
