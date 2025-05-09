@@ -99,16 +99,28 @@ export const authService = {
     try {
       console.log('Checking authentication status');
       const response = await fetch(`${API_URL}/auth/check`, {
+        method: 'GET',
         credentials: 'include',
+        headers: {
+          'Accept': 'application/json',
+        },
       });
 
       if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Unauthorized');
+        }
         const errorData = await response.json();
         throw new Error(errorData.message || 'Auth check failed');
       }
 
       const data = await response.json();
       console.log('Auth check response:', data);
+      
+      if (!data.user) {
+        throw new Error('Invalid response format');
+      }
+
       return data.user;
     } catch (error) {
       console.error('Auth check error:', error);

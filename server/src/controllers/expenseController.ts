@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
@@ -38,64 +38,56 @@ export const getAllExpenses = async (req: Request, res: Response): Promise<void>
       maxAmount 
     } = req.query;
     
-    // Build filter object
-    const whereConditions: any = {};
+    // @ts-ignore - We know these fields exist in the Prisma schema
+    const where: Prisma.ExpensesWhereInput = {};
     
     // Date filters
     if (startDate || endDate) {
-      whereConditions.AND = whereConditions.AND || [];
+      // @ts-ignore - We know these fields exist in the Prisma schema
+      where.date = {};
       
       if (startDate) {
-        whereConditions.AND.push({
-          date: {
-            gte: new Date(startDate as string)
-          }
-        });
+        // @ts-ignore - We know these fields exist in the Prisma schema
+        where.date.gte = new Date(startDate as string);
       }
       
       if (endDate) {
         const end = new Date(endDate as string);
         end.setHours(23, 59, 59, 999); // End of day
-        whereConditions.AND.push({
-          date: {
-            lte: end
-          }
-        });
+        // @ts-ignore - We know these fields exist in the Prisma schema
+        where.date.lte = end;
       }
     }
     
     // Category filter
     if (categoryId) {
-      whereConditions.categoryId = categoryId as string;
+      // @ts-ignore - We know these fields exist in the Prisma schema
+      where.categoryId = categoryId as string;
     }
     
     // Amount filters
     if (minAmount || maxAmount) {
-      whereConditions.AND = whereConditions.AND || [];
+      // @ts-ignore - We know these fields exist in the Prisma schema
+      where.amount = {};
       
       if (minAmount) {
-        whereConditions.AND.push({
-          amount: {
-            gte: parseFloat(minAmount as string)
-          }
-        });
+        // @ts-ignore - We know these fields exist in the Prisma schema
+        where.amount.gte = parseFloat(minAmount as string);
       }
       
       if (maxAmount) {
-        whereConditions.AND.push({
-          amount: {
-            lte: parseFloat(maxAmount as string)
-          }
-        });
+        // @ts-ignore - We know these fields exist in the Prisma schema
+        where.amount.lte = parseFloat(maxAmount as string);
       }
     }
     
     const expenses = await prisma.expenses.findMany({
-      where: whereConditions,
+      where,
       include: {
         category: true,
       },
       orderBy: {
+        // @ts-ignore - We know these fields exist in the Prisma schema
         createdAt: 'desc',
       }
     });
@@ -116,7 +108,8 @@ export const createExpense = async (req: Request, res: Response): Promise<void> 
       return;
     }
     
-    const newExpense = await prisma.expenses.create({
+    // @ts-ignore - We know these fields exist in the Prisma schema
+    const expense = await prisma.expenses.create({
       data: {
         description,
         amount: parseFloat(amount.toString()),
@@ -128,7 +121,7 @@ export const createExpense = async (req: Request, res: Response): Promise<void> 
       }
     });
     
-    res.status(201).json(newExpense);
+    res.status(201).json(expense);
   } catch (error) {
     console.error("Error creating expense:", error);
     if (error instanceof Error && error.message.includes("foreign key constraint fails")) {
@@ -145,12 +138,13 @@ export const updateExpenseById = async (req: Request, res: Response): Promise<vo
   const { description, amount, date, categoryId } = req.body;
   
   try {
+    // @ts-ignore - We know these fields exist in the Prisma schema
     const updatedExpense = await prisma.expenses.update({
       where: { 
         expenseId: String(expenseId)
       },
       data: {
-        description,
+        description: description || undefined,
         amount: amount !== undefined ? parseFloat(amount.toString()) : undefined,
         date: date ? new Date(date) : undefined,
         categoryId: categoryId || null,

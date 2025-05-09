@@ -150,12 +150,6 @@ const Sidebar = () => {
           isCollapsed={isSidebarCollapsed}
         />
         <SidebarLink
-          href="/settings"
-          icon={Settings}
-          label="Settings"
-          isCollapsed={isSidebarCollapsed}
-        />
-        <SidebarLink
           href="/expenses"
           icon={CircleDollarSign}
           label="Expenses"
@@ -163,8 +157,24 @@ const Sidebar = () => {
         />
       </div>
 
-      {/* LOGOUT BUTTON */}
+      {/* BOTTOM BUTTONS */}
       <div className="mt-auto mb-4">
+        <Link href="/settings">
+          <div
+            className={`w-full flex items-center ${
+              isSidebarCollapsed ? "justify-center py-4" : "justify-start px-8 py-4"
+            } hover:text-blue-500 hover:bg-blue-100 gap-3 transition-colors`}
+          >
+            <Settings className="w-6 h-6 !text-gray-700" />
+            <span
+              className={`${
+                isSidebarCollapsed ? "hidden" : "block"
+              } font-medium text-gray-700`}
+            >
+              Settings
+            </span>
+          </div>
+        </Link>
         <button
           onClick={handleLogout}
           className={`w-full flex items-center ${
