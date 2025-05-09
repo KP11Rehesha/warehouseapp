@@ -3,27 +3,184 @@ import { PrismaClient } from "@prisma/client";
 
 const prisma = new PrismaClient();
 
-export const getExpensesByCategory = async (
+// Get expense summary by category
+export const getExpenseSummaryByCategory = async (
   req: Request,
   res: Response
 ): Promise<void> => {
   try {
-    const expenseByCategorySummaryRaw = await prisma.expenseByCategory.findMany(
-      {
-        orderBy: {
-          date: "desc",
-        },
-      }
-    );
-    const expenseByCategorySummary = expenseByCategorySummaryRaw.map(
-      (item) => ({
-        ...item,
-        amount: item.amount.toString(),
-      })
-    );
+    const expenseByCategorySummaryRaw = await prisma.expenseByCategory.findMany({
+      orderBy: {
+        date: "desc",
+      },
+    });
+    
+    const expenseByCategorySummary = expenseByCategorySummaryRaw.map((item) => ({
+      ...item,
+      amount: item.amount.toString(),
+    }));
 
     res.json(expenseByCategorySummary);
   } catch (error) {
-    res.status(500).json({ message: "Error retrieving expenses by category" });
+    console.error("Error fetching expense summary by category:", error);
+    res.status(500).json({ message: "Error retrieving expense summary by category" });
+  }
+};
+
+// Get all expenses
+export const getAllExpenses = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { 
+      startDate, 
+      endDate, 
+      categoryId, 
+      minAmount, 
+      maxAmount 
+    } = req.query;
+    
+    // Build filter object
+    const whereConditions: any = {};
+    
+    // Date filters
+    if (startDate || endDate) {
+      whereConditions.AND = whereConditions.AND || [];
+      
+      if (startDate) {
+        whereConditions.AND.push({
+          date: {
+            gte: new Date(startDate as string)
+          }
+        });
+      }
+      
+      if (endDate) {
+        const end = new Date(endDate as string);
+        end.setHours(23, 59, 59, 999); // End of day
+        whereConditions.AND.push({
+          date: {
+            lte: end
+          }
+        });
+      }
+    }
+    
+    // Category filter
+    if (categoryId) {
+      whereConditions.categoryId = categoryId as string;
+    }
+    
+    // Amount filters
+    if (minAmount || maxAmount) {
+      whereConditions.AND = whereConditions.AND || [];
+      
+      if (minAmount) {
+        whereConditions.AND.push({
+          amount: {
+            gte: parseFloat(minAmount as string)
+          }
+        });
+      }
+      
+      if (maxAmount) {
+        whereConditions.AND.push({
+          amount: {
+            lte: parseFloat(maxAmount as string)
+          }
+        });
+      }
+    }
+    
+    const expenses = await prisma.expenses.findMany({
+      where: whereConditions,
+      include: {
+        category: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      }
+    });
+    
+    res.json(expenses);
+  } catch (error) {
+    console.error("Error fetching all expenses:", error);
+    res.status(500).json({ message: "Error retrieving expenses" });
+  }
+};
+
+// Create a new expense
+export const createExpense = async (req: Request, res: Response): Promise<void> => {
+  const { description, amount, date, categoryId } = req.body;
+  try {
+    if (!description || amount == null || !date) {
+      res.status(400).json({ message: "Description, amount, and date are required." });
+      return;
+    }
+    
+    const newExpense = await prisma.expenses.create({
+      data: {
+        description,
+        amount: parseFloat(amount.toString()),
+        date: new Date(date),
+        categoryId: categoryId || null,
+      },
+      include: {
+        category: true,
+      }
+    });
+    
+    res.status(201).json(newExpense);
+  } catch (error) {
+    console.error("Error creating expense:", error);
+    if (error instanceof Error && error.message.includes("foreign key constraint fails")) {
+      res.status(400).json({ message: "Invalid category ID." });
+    } else {
+      res.status(500).json({ message: "Error creating expense" });
+    }
+  }
+};
+
+// Update an expense by ID
+export const updateExpenseById = async (req: Request, res: Response): Promise<void> => {
+  const { expenseId } = req.params;
+  const { description, amount, date, categoryId } = req.body;
+  
+  try {
+    const updatedExpense = await prisma.expenses.update({
+      where: { 
+        expenseId: String(expenseId)
+      },
+      data: {
+        description,
+        amount: amount !== undefined ? parseFloat(amount.toString()) : undefined,
+        date: date ? new Date(date) : undefined,
+        categoryId: categoryId || null,
+      },
+      include: {
+        category: true,
+      }
+    });
+    
+    res.json(updatedExpense);
+  } catch (error) {
+    console.error(`Error updating expense ${expenseId}:`, error);
+    res.status(500).json({ message: `Error updating expense ${expenseId}` });
+  }
+};
+
+// Delete an expense by ID
+export const deleteExpenseById = async (req: Request, res: Response): Promise<void> => {
+  const { expenseId } = req.params;
+  
+  try {
+    await prisma.expenses.delete({
+      where: { 
+        expenseId: String(expenseId)
+      },
+    });
+    
+    res.status(204).send();
+  } catch (error) {
+    console.error(`Error deleting expense ${expenseId}:`, error);
+    res.status(500).json({ message: `Error deleting expense ${expenseId}` });
   }
 };

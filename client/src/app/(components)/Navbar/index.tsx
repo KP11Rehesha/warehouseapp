@@ -5,7 +5,7 @@ import { setIsDarkMode, setIsSidebarCollapsed } from "@/state";
 import { Menu, Moon, Settings, Sun } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
-import React from "react";
+import React, { useEffect, useState } from "react";
 
 const Navbar = () => {
   const dispatch = useAppDispatch();
@@ -13,6 +13,28 @@ const Navbar = () => {
     (state) => state.global.isSidebarCollapsed
   );
   const isDarkMode = useAppSelector((state) => state.global.isDarkMode);
+  const [userName, setUserName] = useState<string>("");
+
+  useEffect(() => {
+    const fetchUserInfo = async () => {
+      try {
+        const response = await fetch('http://localhost:3001/api/auth/check', {
+          credentials: 'include',
+        });
+        
+        if (response.ok) {
+          const data = await response.json();
+          if (data.user && data.user.name) {
+            setUserName(data.user.name);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching user info:', error);
+      }
+    };
+
+    fetchUserInfo();
+  }, []);
 
   const toggleSidebar = () => {
     dispatch(setIsSidebarCollapsed(!isSidebarCollapsed));
@@ -63,7 +85,7 @@ const Navbar = () => {
               height={50}
               className="rounded-full h-full object-cover"
             />
-            <span className="font-semibold">Test Person 1</span>
+            <span className="font-semibold">{userName || "Loading..."}</span>
           </div>
         </div>
         <Link href="/settings">

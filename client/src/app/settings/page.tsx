@@ -2,27 +2,37 @@
 
 import React, { useState } from "react";
 import Header from "@/app/(components)/Header";
+import { useAppDispatch, useAppSelector } from "@/app/redux";
+import { setIsDarkMode } from "@/state";
 
 type UserSetting = {
   label: string;
   value: string | boolean;
   type: "text" | "toggle";
+  id: string;
 };
 
-const mockSettings: UserSetting[] = [
-  { label: "Username", value: "me", type: "text" },
-  { label: "Email", value: "me@example.com", type: "text" },
-  { label: "Dark Mode", value: false, type: "toggle" },
-  { label: "Language", value: "English", type: "text" },
-];
-
 const Settings = () => {
-  const [userSettings, setUserSettings] = useState<UserSetting[]>(mockSettings);
+  const dispatch = useAppDispatch();
+  const isDarkMode = useAppSelector((state) => state.global.isDarkMode);
+  
+  const [userSettings, setUserSettings] = useState<UserSetting[]>([
+    { label: "Username", value: "me", type: "text", id: "username" },
+    { label: "Email", value: "me@example.com", type: "text", id: "email" },
+    { label: "Dark Mode", value: isDarkMode, type: "toggle", id: "darkMode" },
+    { label: "Language", value: "English", type: "text", id: "language" },
+  ]);
 
   const handleToggleChange = (index: number) => {
     const settingsCopy = [...userSettings];
-    settingsCopy[index].value = !settingsCopy[index].value as boolean;
+    const newValue = !settingsCopy[index].value as boolean;
+    settingsCopy[index].value = newValue;
     setUserSettings(settingsCopy);
+    
+    // If it's the dark mode toggle, update Redux
+    if (settingsCopy[index].id === "darkMode") {
+      dispatch(setIsDarkMode(newValue));
+    }
   };
 
   return (
@@ -42,7 +52,7 @@ const Settings = () => {
           </thead>
           <tbody>
             {userSettings.map((setting, index) => (
-              <tr className="hover:bg-blue-50" key={setting.label}>
+              <tr className="hover:bg-blue-50" key={setting.id}>
                 <td className="py-2 px-4">{setting.label}</td>
                 <td className="py-2 px-4">
                   {setting.type === "toggle" ? (

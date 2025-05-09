@@ -1,0 +1,4 @@
+-- AlterTable
+ALTER TABLE "Expenses" ALTER COLUMN "date" SET DEFAULT CURRENT_TIMESTAMP,
+ALTER COLUMN "description" SET DEFAULT 'No description provided',
+ALTER COLUMN "updatedAt" SET DEFAULT CURRENT_TIMESTAMP;

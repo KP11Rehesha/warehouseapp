@@ -78,6 +78,33 @@ export interface User {
   email: string;
 }
 
+export interface Expense {
+  expenseId: string;
+  description: string;
+  amount: number;
+  date: string; // ISO date string
+  categoryId?: string | null;
+  category?: Category | null; // Optional: if you want to populate category details
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ExpenseInput {
+  expenseId?: string; // Optional for create, required for update
+  description: string;
+  amount: number;
+  date: string; // ISO date string
+  categoryId?: string | null;
+}
+
+export interface ExpenseFilterParams {
+  startDate?: string;
+  endDate?: string;
+  categoryId?: string;
+  minAmount?: string;
+  maxAmount?: string;
+}
+
 export const api = createApi({
   baseQuery: fetchBaseQuery({ 
     baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL 
@@ -180,8 +207,63 @@ export const api = createApi({
       providesTags: ["Users"],
     }),
     getExpensesByCategory: build.query<ExpenseByCategorySummary[], void>({
-      query: () => "/expenses",
-      providesTags: ["Expenses"],
+      query: () => "/expenses/summary/by-category",
+      providesTags: (result) =>
+        result
+          ? [
+              { type: "Expenses", id: "CATEGORY_SUMMARY_LIST" }
+            ]
+          : [{ type: "Expenses", id: "CATEGORY_SUMMARY_LIST" }],
+    }),
+    getExpenses: build.query<Expense[], ExpenseFilterParams | void>({
+      query: (params) => {
+        if (!params) return "/expenses/all";
+        
+        // Build query string
+        const queryParams = new URLSearchParams();
+        
+        if (params.startDate) queryParams.append('startDate', params.startDate);
+        if (params.endDate) queryParams.append('endDate', params.endDate);
+        if (params.categoryId) queryParams.append('categoryId', params.categoryId);
+        if (params.minAmount) queryParams.append('minAmount', params.minAmount);
+        if (params.maxAmount) queryParams.append('maxAmount', params.maxAmount);
+        
+        const queryString = queryParams.toString();
+        return `/expenses/all${queryString ? `?${queryString}` : ''}`;
+      },
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.map(({ expenseId }) => ({ type: 'Expenses' as const, id: expenseId })),
+              { type: "Expenses", id: "LIST" },
+            ]
+          : [{ type: "Expenses", id: "LIST" }],
+    }),
+    createExpense: build.mutation<Expense, ExpenseInput>({
+      query: (newExpense) => ({
+        url: "/expenses",
+        method: "POST",
+        body: newExpense,
+      }),
+      invalidatesTags: [{ type: "Expenses", id: "LIST" }],
+    }),
+    updateExpense: build.mutation<Expense, ExpenseInput & { expenseId: string } >({
+      query: ({ expenseId, ...updateData }) => ({
+        url: `/expenses/${expenseId}`,
+        method: "PUT",
+        body: updateData,
+      }),
+      invalidatesTags: (result, error, { expenseId }) => [
+        { type: "Expenses", id: "LIST" },
+        { type: 'Expenses' as const, id: expenseId }
+      ],
+    }),
+    deleteExpense: build.mutation<void, string>({
+      query: (expenseId) => ({
+        url: `/expenses/${expenseId}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: [{ type: "Expenses", id: "LIST" }],
     }),
   }),
 });
@@ -200,4 +282,8 @@ export const {
   useDeleteCategoryMutation,
   useGetUsersQuery,
   useGetExpensesByCategoryQuery,
+  useGetExpensesQuery,
+  useCreateExpenseMutation,
+  useUpdateExpenseMutation,
+  useDeleteExpenseMutation,
 } = api;

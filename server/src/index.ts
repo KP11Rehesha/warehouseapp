@@ -24,6 +24,15 @@ app.use("/api/products", productRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/users", userRoutes);
 
+// Test endpoint for expenses directly in this file
+app.get("/api/expenses/test", (req, res) => {
+  res.json({ message: "Expenses API is working!" });
+});
+
+app.get("/api/expenses/all", (req, res) => {
+  res.json([]);  // Return empty array for testing
+});
+
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {

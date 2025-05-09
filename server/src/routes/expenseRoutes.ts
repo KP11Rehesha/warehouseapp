@@ -1,8 +1,49 @@
 import { Router } from "express";
-import { getExpensesByCategory } from "../controllers/expenseController";
+import {
+  getExpenseSummaryByCategory,
+  getAllExpenses,
+  createExpense,
+  updateExpenseById,
+  deleteExpenseById
+} from "../controllers/expenseController";
+import { authMiddleware } from "../middleware/authMiddleware";
+import { roleMiddleware } from "../middleware/roleMiddleware";
+import { Role } from "@prisma/client";
 
 const router = Router();
 
-router.get("/", getExpensesByCategory);
+// Route for expense summary by category
+router.get("/summary/by-category", 
+  authMiddleware,
+  getExpenseSummaryByCategory
+);
+
+// Test route to verify functionality
+router.get("/test", (req, res) => {
+  res.json({ message: "Expenses API is working!" });
+});
+
+// Re-enable other routes once this works
+router.get("/all", authMiddleware, (req, res) => {
+  res.json([]);  // Return empty array for now
+});
+
+router.post("/", 
+  authMiddleware, 
+  roleMiddleware([Role.ADMIN, Role.WAREHOUSE_STAFF]),
+  createExpense
+);
+
+router.put("/:expenseId", 
+  authMiddleware, 
+  roleMiddleware([Role.ADMIN, Role.WAREHOUSE_STAFF]),
+  updateExpenseById
+);
+
+router.delete("/:expenseId", 
+  authMiddleware, 
+  roleMiddleware([Role.ADMIN]),
+  deleteExpenseById
+);
 
 export default router;
