@@ -41,7 +41,7 @@ export const getAllExpenses = async (req: Request, res: Response): Promise<void>
     // @ts-ignore - We know these fields exist in the Prisma schema
     const where: Prisma.ExpensesWhereInput = {};
     
-    // Date filters
+    // Date filters - only apply if explicitly provided
     if (startDate || endDate) {
       // @ts-ignore - We know these fields exist in the Prisma schema
       where.date = {};
@@ -88,13 +88,13 @@ export const getAllExpenses = async (req: Request, res: Response): Promise<void>
       },
       orderBy: {
         // @ts-ignore - We know these fields exist in the Prisma schema
-        createdAt: 'desc',
+        createdAt: 'desc', // Order by creation date instead of expense date
       }
     });
     
     res.json(expenses);
   } catch (error) {
-    console.error("Error fetching all expenses:", error);
+    console.error("Error fetching expenses:", error);
     res.status(500).json({ message: "Error retrieving expenses" });
   }
 };

@@ -40,7 +40,7 @@ const ExpensesPage = () => {
   const [formData, setFormData] = useState<ExpenseInput>({
     description: '',
     amount: 0,
-    date: new Date().toISOString().split('T')[0], // Default to today
+    date: new Date().toISOString().split('T')[0],
     categoryId: undefined,
   });
   const [pageError, setPageError] = useState<string | null>(null);
@@ -73,7 +73,7 @@ const ExpensesPage = () => {
       });
     }
     setIsModalOpen(true);
-    setPageError(null); // Clear previous page errors when opening modal
+    setPageError(null);
   };
 
   const handleCloseModal = () => {
@@ -85,7 +85,7 @@ const ExpensesPage = () => {
     const { name, value, type } = e.target;
     setFormData(prev => ({
       ...prev,
-      [name]: type === 'number' ? parseFloat(value) : value,
+      [name]: type === 'number' ? (value === '' ? 0 : parseFloat(value)) : value,
     }));
   };
   

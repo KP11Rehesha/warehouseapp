@@ -23,10 +23,8 @@ router.get("/test", (req, res) => {
   res.json({ message: "Expenses API is working!" });
 });
 
-// Re-enable other routes once this works
-router.get("/all", authMiddleware, (req, res) => {
-  res.json([]);  // Return empty array for now
-});
+// Get all expenses
+router.get("/all", authMiddleware, getAllExpenses);
 
 router.post("/", 
   authMiddleware, 
