@@ -63,15 +63,19 @@ export const createProduct = async (
       sku,
       description,
       price,
-      dimensions,
-      weight,
-      rating,
       stockQuantity,
       categoryId,
+      dimensions,
+      weight,
+      imageUrl,
+      rating,
+      minimumStockLevel,
     } = req.body;
 
-    if (!name || !price || !stockQuantity) {
-      res.status(400).json({ message: "Name, price, and stock quantity are required" });
+    if (!name || price === undefined) {
+      res
+        .status(400)
+        .json({ message: "Name and price are required fields." });
       return;
     }
 
@@ -101,13 +105,15 @@ export const createProduct = async (
         sku: finalSku,
         description,
         price: parseFloat(price),
+        stockQuantity: parseInt(stockQuantity, 10) || 0,
+        categoryId,
         dimensions,
-        weight: weight ? parseFloat(weight) : null,
-        rating: rating ? parseFloat(rating) : null,
-        stockQuantity: parseInt(stockQuantity, 10),
-        categoryId: categoryId || null,
+        weight: weight ? parseFloat(weight) : undefined,
+        imageUrl,
+        rating: rating ? parseFloat(rating) : undefined,
+        minimumStockLevel: minimumStockLevel ? parseInt(minimumStockLevel, 10) : undefined,
       },
-      include: { category: true },
+      include: { category: true, productLocations: { include: { storageBin: true } } },
     });
     res.status(201).json(product);
 
@@ -129,11 +135,12 @@ export const updateProduct = async (req: Request, res: Response): Promise<void> 
       sku,
       description,
       price,
+      categoryId,
       dimensions,
       weight,
+      imageUrl,
       rating,
-      stockQuantity,
-      categoryId,
+      minimumStockLevel,
     } = req.body;
 
     if (sku) {
@@ -151,22 +158,31 @@ export const updateProduct = async (req: Request, res: Response): Promise<void> 
       }
     }
 
-    const product = await prisma.products.update({
+    const product = await prisma.products.findUnique({ where: { productId: id } });
+    if (!product) {
+      res.status(404).json({ message: "Product not found" });
+      return;
+    }
+
+    const updatedProduct = await prisma.products.update({
       where: { productId: id },
       data: {
-        name,
-        sku,
-        description,
-        price: price !== undefined ? parseFloat(price) : undefined,
-        dimensions,
-        weight: weight !== undefined ? parseFloat(weight) : undefined,
-        rating: rating !== undefined ? parseFloat(rating) : undefined,
-        stockQuantity: stockQuantity !== undefined ? parseInt(stockQuantity, 10) : undefined,
-        categoryId,
+        name: name !== undefined ? name : product.name,
+        sku: sku !== undefined ? sku : product.sku,
+        description: description !== undefined ? description : product.description,
+        price: price !== undefined ? parseFloat(price) : product.price,
+        categoryId: categoryId !== undefined ? categoryId : product.categoryId,
+        dimensions: dimensions !== undefined ? dimensions : product.dimensions,
+        weight: weight !== undefined ? (weight === null ? null : parseFloat(weight)) : product.weight,
+        imageUrl: imageUrl !== undefined ? imageUrl : product.imageUrl,
+        rating: rating !== undefined ? (rating === null ? null : parseFloat(rating)) : product.rating,
+        minimumStockLevel: minimumStockLevel !== undefined ? (minimumStockLevel === null ? null : parseInt(minimumStockLevel, 10)) : product.minimumStockLevel,
+        updatedAt: new Date(),
       },
-      include: { category: true },
+      include: { category: true, productLocations: { include: { storageBin: true } } },
     });
-    res.json(product);
+
+    res.json(updatedProduct);
 
   } catch (error: any) {
     if (error.code === 'P2025') {

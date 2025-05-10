@@ -7,6 +7,7 @@ import categoryRoutes from "./routes/categoryRoutes";
 import dashboardRoutes from "./routes/dashboardRoutes";
 import productRoutes from "./routes/productRoutes";
 import userRoutes from "./routes/userRoutes";
+import storageRoutes from "./routes/storageRoutes";
 
 const app = express();
 
@@ -25,6 +26,7 @@ app.use("/api/categories", categoryRoutes);
 app.use("/api/dashboard", dashboardRoutes);
 app.use("/api/products", productRoutes);
 app.use("/api/users", userRoutes);
+app.use("/api/storage", storageRoutes);
 
 // Test endpoint for expenses directly in this file
 app.get("/api/expenses/test", (req, res) => {

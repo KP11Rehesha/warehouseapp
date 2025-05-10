@@ -29,31 +29,36 @@ model Users {
 }
 
 model Category {
-  categoryId   String     @id @default(uuid())
-  name         String
-  description  String?
-  products     Products[]
-  expenses     Expenses[]
-  createdAt    DateTime   @default(now())
-  updatedAt    DateTime   @updatedAt
+  categoryId  String     @id @default(uuid())
+  name        String
+  description String?
+  products    Products[]
+  expenses    Expenses[]
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
 }
 
 model Products {
-  productId     String      @id @default(uuid())
-  sku           String?     @unique // Made optional temporarily
-  name          String
-  description   String?
-  price         Float
-  dimensions    String?     // Format: "LxWxH" in cm
-  weight        Float?      // in kg
-  rating        Float?
-  stockQuantity Int
-  categoryId    String?
-  category      Category?   @relation(fields: [categoryId], references: [categoryId])
-  Sales         Sales[]
-  Purchases     Purchases[]
-  createdAt     DateTime    @default(now())
-  updatedAt     DateTime    @default(now()) @updatedAt
+  productId         String             @id @default(uuid())
+  sku               String?            @unique // Made optional temporarily
+  name              String
+  description       String?
+  price             Float
+  dimensions        String? // Format: "LxWxH" in cm
+  weight            Float? // in kg
+  imageUrl          String? // URL for the product image
+  rating            Float?
+  stockQuantity     Int // This will become the TOTAL stock quantity across all bins
+  minimumStockLevel Int?    // Optional: Minimum desired stock level for alerts
+  categoryId        String?
+  category          Category?          @relation(fields: [categoryId], references: [categoryId])
+  Sales             Sales[]
+  Purchases         Purchases[]
+  productLocations  ProductLocation[] // Relation to where product is stored
+  goodsReceiptItems GoodsReceiptItem[] // Relation to items received for this product
+  shipmentItems     ShipmentItem[]    // Relation to items shipped for this product
+  createdAt         DateTime           @default(now())
+  updatedAt         DateTime           @default(now()) @updatedAt
 }
 
 model Sales {
@@ -77,14 +82,14 @@ model Purchases {
 }
 
 model Expenses {
-  expenseId    String    @id @default(uuid())
-  description  String    @default("No description provided")
-  amount       Float
-  date         DateTime  @default(now())
-  categoryId   String?
-  category     Category? @relation(fields: [categoryId], references: [categoryId])
-  createdAt    DateTime  @default(now())
-  updatedAt    DateTime  @default(now()) @updatedAt
+  expenseId   String    @id @default(uuid())
+  description String    @default("No description provided")
+  amount      Float
+  date        DateTime  @default(now())
+  categoryId  String?
+  category    Category? @relation(fields: [categoryId], references: [categoryId])
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @default(now()) @updatedAt
 }
 
 model SalesSummary {
@@ -112,7 +117,94 @@ model ExpenseByCategory {
   expenseByCategoryId String         @id
   expenseSummaryId    String
   category            String
-  amount              BigInt
+  amount              BigInt // Prisma recommends BigInt for monetary values if precision is critical and you handle it appropriately.
   date                DateTime
   expenseSummary      ExpenseSummary @relation(fields: [expenseSummaryId], references: [expenseSummaryId])
+}
+
+model StorageBin {
+  binId               String             @id @default(uuid())
+  name                String             @unique // e.g., A01-S03-B02
+  locationDescription String? // e.g., "Aisle 1, Shelf 3, Bin 2"
+  dimensions          String? // Bin's own dimensions, e.g., "100x50x30 cm"
+  maxCapacityWeight   Float? // Maximum weight capacity in kg
+  maxCapacityUnits    Int? // Maximum number of generic units or items
+  productLocations    ProductLocation[]
+  goodsReceiptItems   GoodsReceiptItem[] // Relation to items received into this bin
+  shipmentItems       ShipmentItem[]     // Relation to items shipped from this bin
+  createdAt           DateTime           @default(now())
+  updatedAt           DateTime           @updatedAt
+}
+
+model ProductLocation {
+  productLocationId String     @id @default(uuid())
+  productId         String
+  product           Products   @relation(fields: [productId], references: [productId], onDelete: Cascade)
+  binId             String
+  storageBin        StorageBin @relation(fields: [binId], references: [binId], onDelete: Cascade)
+  quantity          Int // Quantity of this product in this specific bin
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now()) @updatedAt
+
+  @@unique([productId, binId]) // A product can only be listed once per bin; quantity is managed here
+  @@index([productId])
+  @@index([binId])
+}
+
+// Model for tracking received goods (Check-in Workflow)
+model GoodsReceipt {
+  receiptId  String             @id @default(uuid())
+  supplier   String?
+  receivedAt DateTime           @default(now())
+  notes      String?
+  items      GoodsReceiptItem[] // Relation to the items in this receipt
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+}
+
+// Model for items within a GoodsReceipt
+model GoodsReceiptItem {
+  goodsReceiptItemId String        @id @default(uuid())
+  goodsReceiptId     String
+  goodsReceipt       GoodsReceipt  @relation(fields: [goodsReceiptId], references: [receiptId], onDelete: Cascade)
+  productId          String
+  product            Products      @relation(fields: [productId], references: [productId])
+  binId              String
+  storageBin         StorageBin    @relation(fields: [binId], references: [binId])
+  quantityReceived   Int
+  createdAt          DateTime      @default(now())
+  updatedAt          DateTime      @updatedAt
+
+  @@index([goodsReceiptId])
+  @@index([productId])
+  @@index([binId])
+}
+
+// Models for Check-out (Shipping) Workflow
+model Shipment {
+  shipmentId   String         @id @default(uuid())
+  customer     String?        // Customer name or ID
+  shippedAt    DateTime       @default(now())
+  notes        String?
+  items        ShipmentItem[]
+  createdAt    DateTime       @default(now())
+  updatedAt    DateTime       @updatedAt
+}
+
+model ShipmentItem {
+  shipmentItemId String     @id @default(uuid())
+  shipmentId     String
+  shipment       Shipment   @relation(fields: [shipmentId], references: [shipmentId], onDelete: Cascade)
+  productId      String
+  product        Products   @relation(fields: [productId], references: [productId])
+  binId          String     // The specific bin the item was picked from
+  storageBin     StorageBin @relation(fields: [binId], references: [binId])
+  quantityShipped Int
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  @@index([shipmentId])
+  @@index([productId])
+  @@index([binId])
 }
