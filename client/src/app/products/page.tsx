@@ -123,6 +123,8 @@ const Products = () => {
               <th scope="col" className="py-3 px-6">Category</th>
               <th scope="col" className="py-3 px-6">Price</th>
               <th scope="col" className="py-3 px-6">Stock</th>
+              <th scope="col" className="py-3 px-6">Dimensions</th>
+              <th scope="col" className="py-3 px-6">Weight (kg)</th>
               <th scope="col" className="py-3 px-6">Actions</th>
             </tr>
           </thead>
@@ -145,6 +147,8 @@ const Products = () => {
                 <td className="py-4 px-6">{product.category?.name || 'Uncategorized'}</td>
                 <td className="py-4 px-6">${product.price.toFixed(2)}</td>
                 <td className="py-4 px-6">{product.stockQuantity}</td>
+                <td className="py-4 px-6">{product.dimensions || 'N/A'}</td>
+                <td className="py-4 px-6">{product.weight ? `${product.weight.toFixed(2)} kg` : 'N/A'}</td>
                 <td className="py-4 px-6 flex items-center space-x-2">
                   <button onClick={() => handleOpenEditModal(product)} className="text-blue-600 hover:text-blue-900">
                     <EditIcon className="w-5 h-5" />
@@ -157,7 +161,7 @@ const Products = () => {
             ))}
             {products.length === 0 && (
                 <tr>
-                    <td colSpan={7} className="text-center py-4">No products found.</td>
+                    <td colSpan={9} className="text-center py-4">No products found.</td>
                 </tr>
             )}
           </tbody>

@@ -16,10 +16,13 @@ export interface Product {
   price: number;
   dimensions?: string;
   weight?: number;
+  imageUrl?: string;
   rating?: number;
   stockQuantity: number;
   categoryId?: string | null;
   category?: Category | null;
+  productLocations?: ProductLocation[];
+  minimumStockLevel?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -32,8 +35,10 @@ export interface ProductInput {
   price: number;
   dimensions?: string;
   weight?: number;
+  imageUrl?: string;
   rating?: number;
   stockQuantity: number;
+  minimumStockLevel?: number;
   categoryId?: string | null;
 }
 
@@ -64,12 +69,30 @@ export interface ExpenseByCategorySummary {
   date: string;
 }
 
+interface DailyActivity {
+  date: string;
+  receipts: number;
+  shipments: number;
+}
+
 export interface DashboardMetrics {
-  popularProducts: Product[];
-  salesSummary: SalesSummary[];
-  purchaseSummary: PurchaseSummary[];
-  expenseSummary: ExpenseSummary[];
-  expenseByCategorySummary: ExpenseByCategorySummary[];
+  // New KPIs
+  totalProducts: number;
+  lowStockItemsCount: number;
+  totalStockValue: number;
+  recentGoodsReceiptsCount: number;
+  recentShipmentsCount: number;
+  totalMonthlyExpenses: number;
+  // New Chart Data
+  stockMovement: DailyActivity[];
+  monthlyExpensesByCategory: Expense[]; // Array of full expense objects for the month
+
+  // Decide if we keep these old ones or phase them out
+  popularProducts?: Product[]; // Made optional for now
+  salesSummary?: SalesSummary[]; // Made optional for now
+  purchaseSummary?: PurchaseSummary[]; // Made optional for now
+  // expenseSummary?: ExpenseSummary[]; // This seems replaced by totalMonthlyExpenses
+  // expenseByCategorySummary?: ExpenseByCategorySummary[]; // This is covered by monthlyExpensesByCategory (raw data)
 }
 
 export interface User {
@@ -105,6 +128,119 @@ export interface ExpenseFilterParams {
   maxAmount?: string;
 }
 
+export interface StorageBin {
+  binId: string;
+  name: string;
+  locationDescription?: string;
+  dimensions?: string;
+  maxCapacityWeight?: number;
+  maxCapacityUnits?: number;
+  productLocations?: ProductLocation[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface StorageBinInput {
+  binId?: string;
+  name: string;
+  locationDescription?: string;
+  dimensions?: string;
+  maxCapacityWeight?: number;
+  maxCapacityUnits?: number;
+}
+
+export interface ProductLocation {
+  productLocationId: string;
+  productId: string;
+  product?: Product; // Optional: if you want to populate product details
+  binId: string;
+  storageBin?: StorageBin; // Optional: if you want to populate bin details
+  quantity: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ProductLocationInput {
+  productLocationId?: string;
+  productId: string;
+  binId: string;
+  quantity: number;
+}
+
+// Interfaces for Goods Receipt (Check-in Workflow)
+export interface GoodsReceiptItem {
+  goodsReceiptItemId: string;
+  goodsReceiptId: string;
+  productId: string;
+  product?: Product; // Optional, for population
+  binId: string;
+  storageBin?: StorageBin; // Optional, for population
+  quantityReceived: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GoodsReceipt {
+  receiptId: string;
+  supplier?: string | null;
+  receivedAt: string;
+  notes?: string | null;
+  items: GoodsReceiptItem[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface GoodsReceiptItemInput {
+  productId: string;
+  binId: string;
+  quantityReceived: number;
+}
+
+export interface GoodsReceiptInput {
+  supplier?: string;
+  receivedAt?: string; // Optional, defaults to now on backend
+  notes?: string;
+  items: GoodsReceiptItemInput[];
+}
+
+// Interfaces for Shipment (Check-out Workflow)
+export interface ShipmentItem {
+  shipmentItemId: string;
+  shipmentId: string;
+  productId: string;
+  product?: Product;       // Optional, for population
+  binId: string;
+  storageBin?: StorageBin; // Optional, for population
+  quantityShipped: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface Shipment {
+  shipmentId: string;
+  customer?: string | null;
+  shippedAt: string;
+  notes?: string | null;
+  items: ShipmentItem[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface ShipmentItemInput {
+  productId: string;
+  binId: string; // From which bin the product is picked
+  quantityShipped: number;
+}
+
+export interface ShipmentInput {
+  customer?: string;
+  notes?: string;
+  items: ShipmentItemInput[];
+  // shippedAt will be set by the server
+}
+
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3001/api";
+
 export const api = createApi({
   baseQuery: fetchBaseQuery({ 
     baseUrl: process.env.NEXT_PUBLIC_API_BASE_URL 
@@ -113,7 +249,7 @@ export const api = createApi({
     credentials: 'include' 
   }),
   reducerPath: "api",
-  tagTypes: ["DashboardMetrics", "Products", "Product", "Users", "Expenses", "Categories", "Category"],
+  tagTypes: ["DashboardMetrics", "Products", "Product", "Users", "Expenses", "Categories", "Category", "StorageBins", "StorageBin", "ProductLocations", "GoodsReceipts", "Shipments"],
   endpoints: (build) => ({
     getDashboardMetrics: build.query<DashboardMetrics, void>({
       query: () => "/dashboard",
@@ -265,6 +401,136 @@ export const api = createApi({
       }),
       invalidatesTags: [{ type: "Expenses", id: "LIST" }],
     }),
+    getStorageBins: build.query<StorageBin[], void>({
+      query: () => "/storage/bins",
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.map(({ binId }) => ({ type: 'StorageBins' as const, id: binId })),
+              { type: "StorageBins", id: "LIST" },
+            ]
+          : [{ type: "StorageBins", id: "LIST" }],
+    }),
+    getStorageBinById: build.query<StorageBin, string>({
+      query: (binId) => `/storage/bins/${binId}`,
+      providesTags: (result, error, binId) => [{ type: "StorageBin", id: binId }],
+    }),
+    createStorageBin: build.mutation<StorageBin, StorageBinInput>({
+      query: (newBin) => ({
+        url: "/storage/bins",
+        method: "POST",
+        body: newBin,
+      }),
+      invalidatesTags: [{ type: "StorageBins", id: "LIST" }],
+    }),
+    updateStorageBin: build.mutation<StorageBin, StorageBinInput & { binId: string }>({
+      query: ({ binId, ...updateData }) => ({
+        url: `/storage/bins/${binId}`,
+        method: "PUT",
+        body: updateData,
+      }),
+      invalidatesTags: (result, error, { binId }) => [
+        { type: "StorageBins", id: "LIST" },
+        { type: "StorageBin", id: binId },
+      ],
+    }),
+    deleteStorageBin: build.mutation<void, string>({
+      query: (binId) => ({
+        url: `/storage/bins/${binId}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: [{ type: "StorageBins", id: "LIST" }],
+    }),
+    getProductLocations: build.query<ProductLocation[], { productId?: string; binId?: string }>({
+      query: (params) => ({
+        url: "/storage/product-locations",
+        params,
+      }),
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.map(({ productLocationId }) => ({ type: 'ProductLocations' as const, id: productLocationId })),
+              { type: "ProductLocations", id: "LIST" },
+            ]
+          : [{ type: "ProductLocations", id: "LIST" }],
+    }),
+    assignProductToBin: build.mutation<ProductLocation, { productId: string; binId: string; quantity: number }>({
+      query: (assignment) => ({
+        url: "/storage/product-locations",
+        method: "POST",
+        body: assignment,
+      }),
+      invalidatesTags: [{ type: "ProductLocations", id: "LIST" }, {type: "Products", id: "LIST"} /* Refresh product stock */],
+    }),
+    updateProductQuantityInBin: build.mutation<ProductLocation, { productLocationId: string; quantity: number }>({
+      query: ({ productLocationId, quantity }) => ({
+        url: `/storage/product-locations/${productLocationId}`,
+        method: "PUT",
+        body: { quantity },
+      }),
+      invalidatesTags: (result, error, { productLocationId }) => [
+        { type: "ProductLocations", id: productLocationId }, 
+        { type: "ProductLocations", id: "LIST" }, 
+        {type: "Products", id: "LIST"} /* Refresh product stock */
+      ],
+    }),
+    removeProductFromBin: build.mutation<void, string>({
+      query: (productLocationId) => ({
+        url: `/storage/product-locations/${productLocationId}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: [{ type: "ProductLocations", id: "LIST" }, {type: "Products", id: "LIST"} /* Refresh product stock */],
+    }),
+    // Goods Receipt Endpoints
+    createGoodsReceipt: build.mutation<GoodsReceipt, GoodsReceiptInput>({
+      query: (newGoodsReceipt) => ({
+        url: "/storage/receipts", // Assuming receipts are under storage endpoint
+        method: "POST",
+        body: newGoodsReceipt,
+      }),
+      invalidatesTags: [
+        { type: "GoodsReceipts", id: "LIST" }, 
+        { type: "Products", id: "LIST" }, 
+        { type: "ProductLocations", id: "LIST" }
+      ],
+    }),
+    getGoodsReceipts: build.query<GoodsReceipt[], void>({
+      query: () => "/storage/receipts",
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.map(({ receiptId }) => ({ type: 'GoodsReceipts' as const, id: receiptId })),
+              { type: "GoodsReceipts", id: "LIST" },
+            ]
+          : [{ type: "GoodsReceipts", id: "LIST" }],
+    }),
+    getGoodsReceiptById: build.query<GoodsReceipt, string>({
+      query: (receiptId) => `/storage/receipts/${receiptId}`,
+      providesTags: (result, error, receiptId) => [{ type: "GoodsReceipts", id: receiptId }],
+    }),
+    // Shipment (Check-out) Endpoints
+    createShipment: build.mutation<Shipment, ShipmentInput>({
+      query: (shipmentDetails) => ({
+        url: "storage/shipments",
+        method: "POST",
+        body: shipmentDetails,
+      }),
+      invalidatesTags: ["Shipments", "ProductLocations", "Products"], // Invalidate related tags
+    }),
+    getShipments: build.query<Shipment[], void>({
+      query: () => "storage/shipments",
+      providesTags: (result) =>
+        result
+          ? [
+              ...result.map(({ shipmentId }) => ({ type: "Shipments" as const, id: shipmentId })),
+              { type: "Shipments", id: "LIST" },
+            ]
+          : [{ type: "Shipments", id: "LIST" }],
+    }),
+    getShipmentById: build.query<Shipment, string>({
+      query: (shipmentId) => `storage/shipments/${shipmentId}`,
+      providesTags: (result, error, shipmentId) => [{ type: "Shipments", id: shipmentId }],
+    }),
   }),
 });
 
@@ -286,4 +552,19 @@ export const {
   useCreateExpenseMutation,
   useUpdateExpenseMutation,
   useDeleteExpenseMutation,
+  useGetStorageBinsQuery,
+  useGetStorageBinByIdQuery,
+  useCreateStorageBinMutation,
+  useUpdateStorageBinMutation,
+  useDeleteStorageBinMutation,
+  useGetProductLocationsQuery,
+  useAssignProductToBinMutation,
+  useUpdateProductQuantityInBinMutation,
+  useRemoveProductFromBinMutation,
+  useCreateGoodsReceiptMutation,
+  useGetGoodsReceiptsQuery,
+  useGetGoodsReceiptByIdQuery,
+  useCreateShipmentMutation,
+  useGetShipmentsQuery,
+  useGetShipmentByIdQuery,
 } = api;

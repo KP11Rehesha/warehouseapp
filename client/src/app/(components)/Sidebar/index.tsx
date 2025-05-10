@@ -13,6 +13,20 @@ import {
   Settings,
   User,
   Tags,
+  Box,
+  FolderKanban,
+  Receipt,
+  Package,
+  Users,
+  LayoutDashboard,
+  ChevronLeft,
+  ChevronRight,
+  Boxes,
+  Truck,
+  Shapes,
+  ScrollText,
+  Send,
+  ClipboardList,
 } from "lucide-react";
 import Image from "next/image";
 import Link from "next/link";
@@ -121,38 +135,68 @@ const Sidebar = () => {
       <div className="flex flex-col mt-8 grow">
         <SidebarLink
           href="/dashboard"
-          icon={Layout}
+          icon={LayoutDashboard}
           label="Dashboard"
           isCollapsed={isSidebarCollapsed}
         />
         <SidebarLink
-          href="/inventory"
-          icon={Archive}
-          label="Inventory"
-          isCollapsed={isSidebarCollapsed}
-        />
-        <SidebarLink
           href="/products"
-          icon={Clipboard}
+          icon={Package}
           label="Products"
           isCollapsed={isSidebarCollapsed}
         />
         <SidebarLink
+          href="/inventory"
+          icon={Boxes}
+          label="Inventory"
+          isCollapsed={isSidebarCollapsed}
+        />
+        <SidebarLink
           href="/categories"
-          icon={Tags}
+          icon={FolderKanban}
           label="Categories"
           isCollapsed={isSidebarCollapsed}
         />
         <SidebarLink
-          href="/users"
-          icon={User}
-          label="Users"
+          href="/expenses"
+          icon={Receipt}
+          label="Expenses"
           isCollapsed={isSidebarCollapsed}
         />
         <SidebarLink
-          href="/expenses"
-          icon={CircleDollarSign}
-          label="Expenses"
+          href="/storage/bins"
+          icon={Archive}
+          label="Storage Bins"
+          isCollapsed={isSidebarCollapsed}
+        />
+        <SidebarLink
+          href="/inventory/receive"
+          icon={Truck}
+          label="Receive Stock"
+          isCollapsed={isSidebarCollapsed}
+        />
+        <SidebarLink
+          href="/inventory/receipts"
+          icon={ScrollText}
+          label="Receipts Log"
+          isCollapsed={isSidebarCollapsed}
+        />
+        <SidebarLink
+          href="/inventory/ship"
+          icon={Send}
+          label="Create Shipment"
+          isCollapsed={isSidebarCollapsed}
+        />
+        <SidebarLink
+          href="/inventory/shipments"
+          icon={ClipboardList}
+          label="Shipments Log"
+          isCollapsed={isSidebarCollapsed}
+        />
+        <SidebarLink
+          href="/users"
+          icon={Users}
+          label="Users"
           isCollapsed={isSidebarCollapsed}
         />
       </div>
