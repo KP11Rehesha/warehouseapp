@@ -75,6 +75,12 @@ interface DailyActivity {
   shipments: number;
 }
 
+export interface StockValueByCategory {
+  categoryId: string;
+  categoryName: string;
+  totalStockValue: number;
+}
+
 export interface DashboardMetrics {
   // New KPIs
   totalProducts: number;
@@ -249,7 +255,7 @@ export const api = createApi({
     credentials: 'include' 
   }),
   reducerPath: "api",
-  tagTypes: ["DashboardMetrics", "Products", "Product", "Users", "Expenses", "Categories", "Category", "StorageBins", "StorageBin", "ProductLocations", "GoodsReceipts", "Shipments"],
+  tagTypes: ["DashboardMetrics", "Products", "Product", "Users", "Expenses", "Categories", "Category", "StorageBins", "StorageBin", "ProductLocations", "GoodsReceipts", "Shipments", "StockValueByCategory"],
   endpoints: (build) => ({
     getDashboardMetrics: build.query<DashboardMetrics, void>({
       query: () => "/dashboard",
@@ -531,6 +537,10 @@ export const api = createApi({
       query: (shipmentId) => `storage/shipments/${shipmentId}`,
       providesTags: (result, error, shipmentId) => [{ type: "Shipments", id: shipmentId }],
     }),
+    getStockValueByCategory: build.query<StockValueByCategory[], void>({
+      query: () => "dashboard/stock-value-by-category",
+      providesTags: ["StockValueByCategory", "Categories", "Product"], // Potentially re-fetch if categories or products change
+    }),
   }),
 });
 
@@ -567,4 +577,5 @@ export const {
   useCreateShipmentMutation,
   useGetShipmentsQuery,
   useGetShipmentByIdQuery,
+  useGetStockValueByCategoryQuery,
 } = api;

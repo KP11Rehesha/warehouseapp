@@ -1,0 +1,157 @@
+@startuml Warehouse UI Component Structure
+
+' Styling
+skinparam {
+  ComponentBackgroundColor White
+  ComponentBorderColor Black
+  PackageBackgroundColor WhiteSmoke
+  PackageBorderColor Gray
+  ArrowColor Black
+  InterfaceBackgroundColor White
+  InterfaceBorderColor Black
+}
+
+' Main application structure
+package "Next.js Application" {
+  component [RootLayout] as rootLayout
+  component [AuthLayout] as authLayout
+  component [StoreProvider] as storeProvider
+  component [Sidebar] as sidebar
+  
+  ' Authentication components
+  package "Authentication" {
+    component [LoginPage] as loginPage
+    component [RegisterPage] as registerPage
+    component [RoleProtectedRoute] as roleProtected
+  }
+  
+  ' Dashboard components
+  package "Dashboard" {
+    component [DashboardPage] as dashboardPage
+    component [DashboardKpiCard] as kpiCard
+    component [StockMovementChart] as stockChart
+    component [ExpensesByCategoryChart] as expenseChart
+    component [StockValueByCategoryChart] as stockValueChart
+  }
+  
+  ' Product management components
+  package "Products" {
+    component [ProductsPage] as productsPage
+    component [ProductForm] as productForm
+    component [ProductTable] as productTable
+    component [ProductDetail] as productDetail
+  }
+  
+  ' Inventory management components
+  package "Inventory" {
+    component [InventoryPage] as inventoryPage
+    component [ReceiveStockPage] as receiveStock
+    component [ShipmentPage] as shipmentPage
+    component [ProductLocationTable] as locationTable
+    component [GoodsReceiptList] as receiptList
+    component [ShipmentList] as shipmentList
+  }
+  
+  ' Storage components
+  package "Storage" {
+    component [StorageBinsPage] as binsPage
+    component [StorageBinForm] as binForm
+    component [StorageBinDetail] as binDetail
+  }
+  
+  ' Expense management components
+  package "Expenses" {
+    component [ExpensesPage] as expensesPage
+    component [ExpenseForm] as expenseForm
+    component [ExpenseTable] as expenseTable
+  }
+  
+  ' User management components
+  package "Users" {
+    component [UsersPage] as usersPage
+    component [UserForm] as userForm
+    component [UserTable] as userTable
+  }
+  
+  ' Shared components
+  package "Shared Components" {
+    component [Header] as header
+    component [Pagination] as pagination
+    component [SearchBar] as searchBar
+    component [FilterControls] as filters
+    component [DataTable] as dataTable
+    component [FormControls] as formControls
+    component [Loader] as loader
+    component [ErrorDisplay] as errorDisplay
+  }
+}
+
+' Component relationships
+rootLayout --> authLayout
+authLayout --> storeProvider
+storeProvider --> sidebar
+storeProvider --> header
+
+' Authentication flows
+loginPage --> storeProvider : updates auth state
+registerPage --> storeProvider : updates auth state
+authLayout --> roleProtected : protects routes
+
+' Dashboard component relationships
+dashboardPage --> kpiCard : includes
+dashboardPage --> stockChart : includes
+dashboardPage --> expenseChart : includes
+dashboardPage --> stockValueChart : includes
+
+' Product component relationships
+productsPage --> productTable : includes
+productsPage --> productForm : includes
+productsPage --> productDetail : includes
+productTable --> dataTable : uses
+productForm --> formControls : uses
+
+' Inventory component relationships
+inventoryPage --> locationTable : includes
+receiveStock --> productTable : references
+receiveStock --> binForm : references
+shipmentPage --> productTable : references
+receiptList --> dataTable : uses
+shipmentList --> dataTable : uses
+
+' Storage component relationships
+binsPage --> binForm : includes
+binsPage --> binDetail : includes
+binForm --> formControls : uses
+
+' Expense component relationships
+expensesPage --> expenseForm : includes
+expensesPage --> expenseTable : includes
+expenseTable --> dataTable : uses
+expenseForm --> formControls : uses
+
+' User component relationships
+usersPage --> userForm : includes
+usersPage --> userTable : includes
+userTable --> dataTable : uses
+userForm --> formControls : uses
+
+' Shared component usage
+productsPage --> searchBar : uses
+productsPage --> filters : uses
+productsPage --> pagination : uses
+inventoryPage --> searchBar : uses
+inventoryPage --> filters : uses
+expensesPage --> searchBar : uses
+expensesPage --> filters : uses
+binsPage --> searchBar : uses
+usersPage --> searchBar : uses
+
+' Loading and error states
+dashboardPage --> loader : shows during data fetching
+dashboardPage --> errorDisplay : shows on error
+productsPage --> loader : shows during data fetching
+productsPage --> errorDisplay : shows on error
+inventoryPage --> loader : shows during data fetching
+inventoryPage --> errorDisplay : shows on error
+
+@enduml 

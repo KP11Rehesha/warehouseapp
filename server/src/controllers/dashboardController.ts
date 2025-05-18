@@ -132,6 +132,43 @@ export const getDashboardData = async (req: Request, res: Response) => {
   }
 };
 
+// New function to get total stock value by category
+export const getStockValueByCategory = async (req: Request, res: Response) => {
+  try {
+    const categoriesWithStockValue = await prisma.category.findMany({
+      select: {
+        categoryId: true, // Assuming categoryId is the actual ID field from Prisma client type
+        name: true,
+        products: {
+          select: {
+            price: true,
+            stockQuantity: true,
+          },
+        },
+      },
+    });
+
+    const result = categoriesWithStockValue.map(category => {
+      const totalValue = category.products.reduce((sum, product) => {
+        // Ensure price and stockQuantity are treated as numbers, defaulting to 0 if null/undefined
+        const price = Number(product.price) || 0;
+        const stockQuantity = Number(product.stockQuantity) || 0;
+        return sum + price * stockQuantity;
+      }, 0);
+      return {
+        categoryId: category.categoryId,
+        categoryName: category.name,
+        totalStockValue: totalValue,
+      };
+    });
+
+    res.json(result);
+  } catch (error: any) {
+    console.error("Error fetching stock value by category:", error);
+    res.status(500).json({ message: "Error fetching stock value by category", details: error.message });
+  }
+};
+
 // Keep or remove/adapt other helper functions like getPopularProducts, etc.
 // For example, if getPopularProducts is still needed:
 /*

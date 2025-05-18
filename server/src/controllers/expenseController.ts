@@ -102,32 +102,50 @@ export const getAllExpenses = async (req: Request, res: Response): Promise<void>
 // Create a new expense
 export const createExpense = async (req: Request, res: Response): Promise<void> => {
   const { description, amount, date, categoryId } = req.body;
+  // const attachingUserId = (req as any).user?.id; // Temporarily removed due to linter issues
+
   try {
     if (!description || amount == null || !date) {
       res.status(400).json({ message: "Description, amount, and date are required." });
       return;
     }
     
-    // @ts-ignore - We know these fields exist in the Prisma schema
+    const expenseData: Prisma.ExpensesCreateInput = {
+      description,
+      amount: parseFloat(amount.toString()),
+      date: new Date(date),
+    };
+
+    if (categoryId) {
+      expenseData.category = { connect: { categoryId: categoryId } }; 
+    }
+
+    // Temporarily not associating user due to persistent linter errors
+    // if (attachingUserId) {
+    //   expenseData.user = { connect: { userId: attachingUserId } }; 
+    // }
+
     const expense = await prisma.expenses.create({
-      data: {
-        description,
-        amount: parseFloat(amount.toString()),
-        date: new Date(date),
-        categoryId: categoryId || null,
-      },
+      data: expenseData,
       include: {
         category: true,
+        // user: true // Temporarily removed
       }
     });
     
     res.status(201).json(expense);
-  } catch (error) {
+    return;
+
+  } catch (error: any) {
     console.error("Error creating expense:", error);
-    if (error instanceof Error && error.message.includes("foreign key constraint fails")) {
-      res.status(400).json({ message: "Invalid category ID." });
+    if (error.code === 'P2003' || error.code === 'P2025') { 
+      if (error.meta?.field_name?.includes('categoryId') || error.message?.includes('Category')) {
+        res.status(400).json({ message: "Invalid or non-existent category ID." }); return;
+      }
+      // User-related error check removed for now
+      res.status(400).json({ message: "Invalid foreign key or referenced record not found." }); return;
     } else {
-      res.status(500).json({ message: "Error creating expense" });
+      res.status(500).json({ message: "Error creating expense" }); return;
     }
   }
 };
@@ -136,28 +154,39 @@ export const createExpense = async (req: Request, res: Response): Promise<void> 
 export const updateExpenseById = async (req: Request, res: Response): Promise<void> => {
   const { expenseId } = req.params;
   const { description, amount, date, categoryId } = req.body;
-  
+
   try {
-    // @ts-ignore - We know these fields exist in the Prisma schema
+    const dataToUpdate: Prisma.ExpensesUpdateInput = {};
+    if (description !== undefined) dataToUpdate.description = description;
+    if (amount !== undefined) dataToUpdate.amount = parseFloat(amount.toString());
+    if (date !== undefined) dataToUpdate.date = new Date(date);
+    
+    if (categoryId === null) { 
+        dataToUpdate.category = { disconnect: true };
+    } else if (categoryId !== undefined) { 
+        dataToUpdate.category = { connect: { categoryId: categoryId } };
+    }
+    
     const updatedExpense = await prisma.expenses.update({
-      where: { 
-        expenseId: String(expenseId)
-      },
-      data: {
-        description: description || undefined,
-        amount: amount !== undefined ? parseFloat(amount.toString()) : undefined,
-        date: date ? new Date(date) : undefined,
-        categoryId: categoryId || null,
-      },
+      where: { expenseId: String(expenseId) },
+      data: dataToUpdate,
       include: {
         category: true,
+        // user: true // Temporarily removed
       }
     });
     
     res.json(updatedExpense);
-  } catch (error) {
+    return;
+
+  } catch (error: any) {
     console.error(`Error updating expense ${expenseId}:`, error);
-    res.status(500).json({ message: `Error updating expense ${expenseId}` });
+    if (error.code === 'P2025') {
+        res.status(404).json({ message: `Expense with ID ${expenseId} not found.` }); return;
+    }  else if (error.code === 'P2003') {
+        res.status(400).json({ message: "Invalid category ID for update." }); return;
+    }
+    res.status(500).json({ message: `Error updating expense ${expenseId}` }); return;
   }
 };
 

@@ -1,0 +1,135 @@
+model Product {
+  id                  String @id @default(cuid())
+  name                String
+  sku                 String @unique
+  description         String?
+  price               Decimal?
+  stockQuantity       Int?
+  categoryId          String?
+  category            Category? @relation(fields: [categoryId], references: [id])
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+  imageFile           String? // Was imageUrl
+  length              Float?
+  width               Float?
+  height              Float?
+  weight              Float?
+  rating              Float?
+  minimumStockLevel   Int?
+
+  productLocations    ProductLocation[]
+  goodsReceiptItems   GoodsReceiptItem[]
+  shipmentItems       ShipmentItem[]
+  notifications       Notification[] // Added for notifications
+
+  @@index([name])
+  @@index([sku])
+}
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  name      String?
+  password  String
+  role      Role     @default(USER)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  notifications Notification[] // Added for notifications
+}
+
+enum Role {
+// ... existing code ...
+}
+
+model Category {
+  id        String   @id @default(cuid())
+  name      String   @unique
+  products  Product[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Expense {
+// ... existing code ...
+}
+
+model StorageBin {
+  id                String @id @default(cuid())
+  name              String @unique
+  description       String?
+  length            Float?
+  width             Float?
+  height            Float?
+  capacity          Float? // e.g., in cubic meters or units
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+  productLocations  ProductLocation[]
+  goodsReceiptItems GoodsReceiptItem[] // For tracking where items were received into
+  shipmentItems     ShipmentItem[]     // For tracking where items were picked from
+  notifications     Notification[]     // Added for notifications (e.g. bin full, etc. - future)
+}
+
+model ProductLocation {
+// ... existing code ...
+}
+
+model GoodsReceipt {
+  id          String    @id @default(cuid())
+  supplier    String?
+  notes       String?
+  receivedAt  DateTime  @default(now())
+  items       GoodsReceiptItem[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  userId      String? // User who created the receipt
+  user        User?     @relation(fields: [userId], references: [id])
+}
+
+// ... existing code ...
+model Shipment {
+  id          String    @id @default(cuid())
+  customer    String?
+  notes       String?
+  shippedAt   DateTime  @default(now())
+  items       ShipmentItem[]
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  userId      String? // User who created the shipment
+  user        User?     @relation(fields: [userId], references: [id])
+}
+
+// ... existing code ...
+// New Notification Model
+model Notification {
+  id          String    @id @default(cuid())
+  message     String
+  type        NotificationType @default(GENERAL)
+  isRead      Boolean   @default(false)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  userId      String? // If null, it's a system-wide notification for all admins
+  user        User?     @relation(fields: [userId], references: [id])
+
+  productId   String?
+  product     Product?  @relation(fields: [productId], references: [id])
+
+  storageBinId String? // Optional: if notification relates to a specific bin
+  storageBin   StorageBin? @relation(fields: [storageBinId], references: [id])
+
+  // Add other relevant entity IDs if notifications can be linked to them
+  // e.g., goodsReceiptId, shipmentId
+
+  @@index([userId])
+  @@index([productId])
+  @@index([isRead])
+}
+
+enum NotificationType {
+  GENERAL
+  LOW_STOCK
+  NEW_PRODUCT
+  ORDER_SHIPPED
+  BIN_CAPACITY // Example for future use
+  // Add other types as needed
+} 

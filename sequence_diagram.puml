@@ -1,0 +1,134 @@
+@startuml Warehouse Application Workflows
+
+' Styling
+skinparam {
+  SequenceArrowColor Black
+  SequenceLifeLineBorderColor Black
+  SequenceLifeLineBackgroundColor White
+  SequenceParticipantBorderColor Black
+  SequenceParticipantBackgroundColor White
+  SequenceBoxBorderColor Gray
+  SequenceBoxBackgroundColor WhiteSmoke
+}
+
+' Participants
+actor "User" as user
+participant "Next.js Frontend" as frontend
+participant "Redux Store" as redux
+participant "RTK Query API" as rtk
+participant "Express Server" as server
+participant "Controller" as controller
+participant "Prisma Client" as prisma
+database "PostgreSQL" as db
+
+' Login Workflow
+group Authentication Flow
+    user -> frontend: Login with credentials
+    frontend -> rtk: Call login endpoint
+    rtk -> server: POST /api/auth/login
+    server -> controller: authController.login()
+    controller -> prisma: Find user by email
+    prisma -> db: Query Users table
+    db --> prisma: Return user record
+    prisma --> controller: User data with password
+    controller -> controller: Validate password
+    controller -> controller: Generate JWT token
+    controller --> server: Set HTTP-only cookie with token
+    server --> rtk: Return user data (without password)
+    rtk --> redux: Store user in state
+    redux --> frontend: Update UI based on auth state
+    frontend --> user: Redirect to dashboard
+end
+
+' Product Management Workflow
+group Product Management Flow
+    user -> frontend: Navigate to Products page
+    frontend -> rtk: Call getProducts endpoint
+    rtk -> server: GET /api/products
+    server -> controller: productController.getProducts()
+    controller -> prisma: Find all products
+    prisma -> db: Query Products table with relations
+    db --> prisma: Return product records
+    prisma --> controller: Format product data
+    controller --> server: Return JSON response
+    server --> rtk: Product data
+    rtk --> redux: Cache product data
+    redux --> frontend: Update UI with products
+    frontend --> user: Display product list
+    
+    user -> frontend: Create new product
+    frontend -> rtk: Call createProduct endpoint
+    rtk -> server: POST /api/products
+    server -> controller: productController.createProduct()
+    controller -> prisma: Create new product
+    prisma -> db: Insert into Products table
+    db --> prisma: Return new product ID
+    prisma --> controller: New product data
+    controller --> server: Return created product
+    server --> rtk: New product data
+    rtk --> redux: Update product cache
+    redux --> frontend: Update UI with new product
+    frontend --> user: Show success message
+end
+
+' Inventory Management Workflow
+group Inventory Management Flow
+    user -> frontend: Navigate to Receive Stock page
+    frontend -> rtk: Get products and storage bins
+    rtk -> server: Multiple API calls
+    server --> rtk: Return data
+    rtk --> redux: Update state
+    redux --> frontend: Populate form data
+    frontend --> user: Display receive stock form
+    
+    user -> frontend: Submit goods receipt form
+    frontend -> rtk: Call createGoodsReceipt endpoint
+    rtk -> server: POST /api/storage/receipts
+    server -> controller: storageController.createGoodsReceipt()
+    controller -> prisma: Begin transaction
+    prisma -> db: Create GoodsReceipt record
+    db --> prisma: Return receipt ID
+    
+    loop For each item in receipt
+        prisma -> db: Create GoodsReceiptItem
+        db --> prisma: Return item ID
+        prisma -> db: Update product stock quantity
+        prisma -> db: Create/Update ProductLocation
+    end
+    
+    prisma -> prisma: Commit transaction
+    prisma --> controller: Return complete receipt data
+    controller --> server: Format response
+    server --> rtk: Return receipt data
+    rtk --> redux: Update inventory state
+    redux --> frontend: Update UI
+    frontend --> user: Show success confirmation
+end
+
+' Dashboard Workflow
+group Dashboard Flow
+    user -> frontend: Navigate to Dashboard
+    frontend -> rtk: Call getDashboardMetrics endpoint
+    rtk -> server: GET /api/dashboard
+    server -> controller: dashboardController.getDashboardData()
+    
+    controller -> prisma: Get total products
+    controller -> prisma: Get low stock items
+    controller -> prisma: Calculate stock value
+    controller -> prisma: Get recent receipts count
+    controller -> prisma: Get recent shipments count
+    controller -> prisma: Get monthly expenses
+    controller -> prisma: Get stock movement data
+    
+    prisma -> db: Multiple database queries
+    db --> prisma: Return raw data
+    
+    prisma --> controller: Process and aggregate data
+    controller --> server: Formatted dashboard metrics
+    server --> rtk: Return dashboard data
+    rtk --> redux: Cache dashboard metrics
+    redux --> frontend: Update dashboard components
+    frontend --> user: Display dashboard with KPIs and charts
+end
+
+@enduml 

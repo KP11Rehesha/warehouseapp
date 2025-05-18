@@ -1,0 +1,153 @@
+@startuml Warehouse Application Architecture
+
+' Styling
+skinparam {
+  DefaultFontName Arial
+  DefaultFontSize 12
+  DefaultTextAlignment center
+  Shadowing false
+  
+  PackageBackgroundColor White
+  PackageBorderColor Black
+  
+  ComponentBackgroundColor White
+  ComponentBorderColor Black
+  
+  DatabaseBackgroundColor White
+  DatabaseBorderColor Black
+  
+  ArrowColor Black
+  
+  ClassBackgroundColor White
+  ClassBorderColor Black
+}
+
+' Top level components
+package "Client (Next.js)" {
+  package "Frontend Components" {
+    component "Pages" {
+      [Dashboard Page]
+      [Products Page]
+      [Inventory Management]
+      [Categories Page]
+      [Expenses Page]
+      [Storage Bins Page]
+      [Users Page]
+      [Settings Page]
+    }
+    
+    component "Shared Components" {
+      [Header]
+      [Sidebar]
+      [Form Components]
+      [Table Components]
+      [Chart Components]
+    }
+  }
+  
+  package "State Management" {
+    component "Redux Store" {
+      [Global State]
+      [API State (RTK Query)]
+    }
+  }
+  
+  component "Middleware" {
+    [Auth Protection]
+    [Role-based Access]
+  }
+  
+  component "API Client" {
+    [RTK Query API]
+    [Typed Interfaces]
+  }
+}
+
+package "Server (Express)" {
+  package "API Routes" {
+    [Auth Routes]
+    [User Routes]
+    [Product Routes]
+    [Category Routes]
+    [Expense Routes]
+    [Dashboard Routes]
+    [Storage Routes]
+  }
+  
+  package "Controllers" {
+    [Auth Controller]
+    [User Controller]
+    [Product Controller]
+    [Category Controller]
+    [Expense Controller]
+    [Dashboard Controller]
+    [Storage Controller]
+  }
+  
+  package "Middleware" as ServerMiddleware {
+    [Auth Middleware]
+    [Error Handling]
+    [CORS & Security]
+  }
+  
+  package "Data Access" {
+    [Prisma Client]
+  }
+}
+
+database "PostgreSQL" {
+  package "Database Models" {
+    [Users]
+    [Products]
+    [Categories]
+    [Expenses]
+    [StorageBin]
+    [ProductLocation]
+    [GoodsReceipt]
+    [GoodsReceiptItem]
+    [Shipment]
+    [ShipmentItem]
+    [Sales]
+    [Purchases]
+  }
+}
+
+' Connections between components
+
+' Client-side connections
+[Pages] --> [Shared Components]: uses
+[Pages] --> [Global State]: consumes
+[Pages] --> [API State (RTK Query)]: data fetching
+[API State (RTK Query)] --> [RTK Query API]: defines endpoints
+[Auth Protection] --> [RTK Query API]: controls access
+[Role-based Access] --> [Global State]: checks user role
+
+' Server-side connections
+[API Routes] --> [Controllers]: routes to
+[Controllers] --> [Prisma Client]: database operations
+[Auth Middleware] -up-> [Controllers]: protects routes
+[Error Handling] -up-> [Controllers]: handles errors
+
+' Client-Server connection
+[RTK Query API] -right-> [API Routes]: HTTP requests
+
+' Server-Database connection
+[Prisma Client] -right-> [Database Models]: ORM mapping
+
+' Domain flows (examples)
+note right of [Dashboard Page]
+  Dashboard shows KPIs, charts, and metrics
+  from various parts of the system
+end note
+
+note right of [Product Controller]
+  Handles CRUD operations for products,
+  including stock management
+end note
+
+note right of [Storage Controller]
+  Manages storage bins, product locations,
+  goods receipts, and shipments
+end note
+
+@enduml 

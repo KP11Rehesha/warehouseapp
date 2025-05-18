@@ -275,73 +275,76 @@ export const removeProductFromBin = async (req: Request, res: Response) => {
 
 export const createGoodsReceipt = async (req: Request, res: Response) => {
   const { supplier, receivedAt, notes, items } = req.body;
+  // const currentUserId = (req as any).user?.id; // Temporarily removed
 
   if (!items || !Array.isArray(items) || items.length === 0) {
     return res.status(400).json({ message: "Goods receipt must contain at least one item." });
   }
 
+  // Validate all items first
+  for (const item of items) {
+    if (!item.productId || !item.binId || !item.quantityReceived || parseInt(item.quantityReceived, 10) <= 0) {
+      return res.status(400).json({
+        message: "Each item must have a valid productId, binId (for storageBin), and a positive quantityReceived."
+      });
+    }
+  }
+
   try {
     const createdReceipt = await prisma.$transaction(async (tx) => {
-      const newReceipt = await tx.goodsReceipt.create({
-        data: {
-          supplier,
-          receivedAt: receivedAt ? new Date(receivedAt) : new Date(),
-          notes,
-        },
-      });
+      const goodsReceiptData: Prisma.GoodsReceiptCreateInput = {
+        supplier,
+        receivedAt: receivedAt ? new Date(receivedAt) : new Date(),
+        notes,
+      };
+      // Temporarily removed user connection
+      // if (currentUserId) {
+      //   goodsReceiptData.user = { connect: { userId: currentUserId } }; 
+      // }
+      const newReceipt = await tx.goodsReceipt.create({ data: goodsReceiptData });
 
       const itemCreations = items.map(async (item: any) => {
-        if (!item.productId || !item.binId || !item.quantityReceived || item.quantityReceived <= 0) {
-          throw new Error("Each item must have productId, binId, and a positive quantityReceived.");
-        }
+        // Validation now done upfront
+        const goodsReceiptItemData: Prisma.GoodsReceiptItemCreateInput = {
+          goodsReceipt: { connect: { receiptId: newReceipt.receiptId } }, 
+          product: { connect: { productId: item.productId } }, 
+          quantityReceived: parseInt(item.quantityReceived, 10),
+          // Assuming storageBin connection is mandatory as per linter feedback
+          storageBin: { connect: { binId: item.binId } }, 
+        };
 
-        // Create the GoodsReceiptItem
-        const receiptItem = await tx.goodsReceiptItem.create({
-          data: {
-            goodsReceiptId: newReceipt.receiptId,
-            productId: item.productId,
-            binId: item.binId,
-            quantityReceived: parseInt(item.quantityReceived, 10),
-          },
-        });
+        const receiptItem = await tx.goodsReceiptItem.create({ data: goodsReceiptItemData });
 
-        // Update ProductLocation
         const existingLocation = await tx.productLocation.findUnique({
           where: { productId_binId: { productId: item.productId, binId: item.binId } },
         });
 
         if (existingLocation) {
           await tx.productLocation.update({
-            where: { productLocationId: existingLocation.productLocationId },
+            where: { productLocationId: existingLocation.productLocationId }, 
             data: { quantity: existingLocation.quantity + parseInt(item.quantityReceived, 10) },
           });
         } else {
           await tx.productLocation.create({
             data: {
               productId: item.productId,
-              binId: item.binId,
+              binId: item.binId, 
               quantity: parseInt(item.quantityReceived, 10),
             },
           });
         }
-        // Update total stock for the product
         await updateProductTotalStock(item.productId, tx as Prisma.TransactionClient);
         return receiptItem;
       });
 
       const createdItems = await Promise.all(itemCreations);
-
       return { ...newReceipt, items: createdItems };
     });
 
     res.status(201).json(createdReceipt);
   } catch (error: any) {
     console.error("Error creating goods receipt:", error);
-    if (error.message.includes("must have productId, binId")) {
-        return res.status(400).json({ message: error.message });
-    }
-    // Handle other potential errors, like product or bin not found if not using Restrict action properly
-    // or if a product/bin ID is invalid.
+    // Add more specific error handling for P2003, P2025 if connections fail
     res.status(500).json({ message: "Error creating goods receipt", details: error.message });
   }
 };

@@ -1,0 +1,156 @@
+@startuml Warehouse Database Schema
+
+' Styling to match the example image
+skinparam {
+  ClassBackgroundColor White
+  ClassBorderColor Black
+  ClassFontSize 12
+  ClassFontName Arial
+  ClassFontColor Black
+  ClassAttributeFontColor Black
+  ClassAttributeFontSize 11
+  linetype ortho
+  arrowColor Black
+}
+
+' Define tables with their columns and primary/foreign keys
+table Users {
+  <b>PK</b> userId : text <<not null>>
+  name : text <<not null>>
+  email : text <<not null, unique>>
+  password : text <<not null>>
+  role : enum <<not null>>
+  createdAt : timestamp <<not null>>
+  updatedAt : timestamp <<not null>>
+}
+
+table Category {
+  <b>PK</b> categoryId : text <<not null>>
+  name : text <<not null>>
+  description : text
+  createdAt : timestamp <<not null>>
+  updatedAt : timestamp <<not null>>
+}
+
+table Products {
+  <b>PK</b> productId : text <<not null>>
+  sku : text <<unique>>
+  name : text <<not null>>
+  description : text
+  price : float <<not null>>
+  dimensions : text
+  weight : float
+  imageUrl : text
+  rating : float
+  stockQuantity : int <<not null>>
+  minimumStockLevel : int
+  <b>FK</b> categoryId : text
+  createdAt : timestamp <<not null>>
+  updatedAt : timestamp <<not null>>
+}
+
+table Sales {
+  <b>PK</b> saleId : text <<not null>>
+  <b>FK</b> productId : text <<not null>>
+  timestamp : timestamp <<not null>>
+  quantity : int <<not null>>
+  unitPrice : float <<not null>>
+  totalAmount : float <<not null>>
+}
+
+table Purchases {
+  <b>PK</b> purchaseId : text <<not null>>
+  <b>FK</b> productId : text <<not null>>
+  timestamp : timestamp <<not null>>
+  quantity : int <<not null>>
+  unitCost : float <<not null>>
+  totalCost : float <<not null>>
+}
+
+table Expenses {
+  <b>PK</b> expenseId : text <<not null>>
+  description : text <<not null>>
+  amount : float <<not null>>
+  date : timestamp <<not null>>
+  <b>FK</b> categoryId : text
+  createdAt : timestamp <<not null>>
+  updatedAt : timestamp <<not null>>
+}
+
+table StorageBin {
+  <b>PK</b> binId : text <<not null>>
+  name : text <<not null, unique>>
+  locationDescription : text
+  dimensions : text
+  maxCapacityWeight : float
+  maxCapacityUnits : int
+  createdAt : timestamp <<not null>>
+  updatedAt : timestamp <<not null>>
+}
+
+table ProductLocation {
+  <b>PK</b> productLocationId : text <<not null>>
+  <b>FK</b> productId : text <<not null>>
+  <b>FK</b> binId : text <<not null>>
+  quantity : int <<not null>>
+  createdAt : timestamp <<not null>>
+  updatedAt : timestamp <<not null>>
+}
+
+table GoodsReceipt {
+  <b>PK</b> receiptId : text <<not null>>
+  supplier : text
+  receivedAt : timestamp <<not null>>
+  notes : text
+  createdAt : timestamp <<not null>>
+  updatedAt : timestamp <<not null>>
+}
+
+table GoodsReceiptItem {
+  <b>PK</b> goodsReceiptItemId : text <<not null>>
+  <b>FK</b> goodsReceiptId : text <<not null>>
+  <b>FK</b> productId : text <<not null>>
+  <b>FK</b> binId : text <<not null>>
+  quantityReceived : int <<not null>>
+  createdAt : timestamp <<not null>>
+  updatedAt : timestamp <<not null>>
+}
+
+table Shipment {
+  <b>PK</b> shipmentId : text <<not null>>
+  customer : text
+  shippedAt : timestamp <<not null>>
+  notes : text
+  createdAt : timestamp <<not null>>
+  updatedAt : timestamp <<not null>>
+}
+
+table ShipmentItem {
+  <b>PK</b> shipmentItemId : text <<not null>>
+  <b>FK</b> shipmentId : text <<not null>>
+  <b>FK</b> productId : text <<not null>>
+  <b>FK</b> binId : text <<not null>>
+  quantityShipped : int <<not null>>
+  createdAt : timestamp <<not null>>
+  updatedAt : timestamp <<not null>>
+}
+
+' Define relationships using more specific arrows
+' One-to-many relationships
+Category "1" ||--o{ Products : has
+Category "1" ||--o{ Expenses : categorizes
+
+Products "1" ||--o{ Sales : generates
+Products "1" ||--o{ Purchases : involves
+Products "1" ||--o{ ProductLocation : stored in
+Products "1" ||--o{ GoodsReceiptItem : received as
+Products "1" ||--o{ ShipmentItem : shipped as
+
+StorageBin "1" ||--o{ ProductLocation : contains
+StorageBin "1" ||--o{ GoodsReceiptItem : receives to
+StorageBin "1" ||--o{ ShipmentItem : ships from
+
+GoodsReceipt "1" ||--o{ GoodsReceiptItem : contains
+Shipment "1" ||--o{ ShipmentItem : includes
+
+@enduml 

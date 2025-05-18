@@ -39,7 +39,7 @@ const categoryController = {
 
   async createCategory(req: Request, res: Response) {
     try {
-      const { name, description } = req.body;
+      const { name } = req.body;
 
       if (!name) {
         return res.status(400).json({ message: 'Category name is required' });
@@ -47,15 +47,16 @@ const categoryController = {
 
       const category = await prisma.category.create({
         data: {
-          categoryId: uuidv4(),
           name,
-          description,
         },
       });
 
       res.status(201).json(category);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error creating category:', error);
+      if (error.code === 'P2002' && error.meta?.target?.includes('name')) {
+        return res.status(409).json({ message: `A category with the name '${req.body.name}' already exists.` });
+      }
       res.status(500).json({ message: 'Error creating category' });
     }
   },
@@ -63,7 +64,7 @@ const categoryController = {
   async updateCategory(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const { name, description } = req.body;
+      const { name } = req.body;
 
       if (!name) {
         return res.status(400).json({ message: 'Category name is required' });
@@ -73,13 +74,18 @@ const categoryController = {
         where: { categoryId: id },
         data: {
           name,
-          description,
         },
       });
 
       res.json(category);
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error updating category:', error);
+      if (error.code === 'P2025') {
+        return res.status(404).json({ message: 'Category not found' });
+      }
+      if (error.code === 'P2002' && error.meta?.target?.includes('name')) {
+        return res.status(409).json({ message: `A category with the name '${req.body.name}' already exists.` });
+      }
       res.status(500).json({ message: 'Error updating category' });
     }
   },
@@ -88,7 +94,6 @@ const categoryController = {
     try {
       const { id } = req.params;
 
-      // Check if category has associated products
       const products = await prisma.products.findMany({
         where: { categoryId: id },
       });
@@ -104,8 +109,11 @@ const categoryController = {
       });
 
       res.json({ message: 'Category deleted successfully' });
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error deleting category:', error);
+      if (error.code === 'P2025') {
+        return res.status(404).json({ message: 'Category not found' });
+      }
       res.status(500).json({ message: 'Error deleting category' });
     }
   },
